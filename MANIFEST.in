@@ -1,0 +1,4 @@
+graft src/ftw
+graft docs
+include *.rst
+global-exclude *.pyc
