@@ -10,8 +10,11 @@ import os
 import shutil
 import sys
 import tempfile
+import time
+import logging
 
 sampler = None
+logger = logging.getLogger("ftw.flamegraph")
 flamegraph_script = os.path.join(os.path.dirname(__file__), 'flamegraph.pl')
 
 
@@ -61,12 +64,19 @@ Publish.publish_module_standard = publish_module_standard
 def profile(tempdir, interval):
     sampler.reset(interval=interval)
     sampler.start()
+    start = time.time()
     yield
+    end = time.time()
+    logger.info("Samples taken: %s, sample time: %s ms, request time: %s ms" % (
+        sampler.samples_taken,
+        sampler.sample_time * 1000,
+        (end - start) * 1000
+    ))
     sampler.stop()
     flame_file = os.path.join(tempdir, 'profile.flame')
     svg_file = os.path.join(tempdir, 'profile.svg')
     formatter = FlamegraphFormatter()
-    formatter.store(sampler, flame_file)
+    formatter.store(sampler.stacks, flame_file)
     os.system('%(flamegraph_script)s --egghash --color rainbow %(flame_file)s'
               ' > %(svg_file)s' % (dict(
                   flamegraph_script=flamegraph_script,
