@@ -23,7 +23,7 @@ def publish_module_standard(
         environ=os.environ, debug=0, request=None, response=None):
 
     qs = parse_qs(request.get('QUERY_STRING', ''))
-    if qs.get('profile') == ['1']:
+    if qs.get('flamegraph') == ['1']:
         interval = qs.get('interval', ['0.001'])
         try:
             interval = float(interval[0])
