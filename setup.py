@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Installer for the ftw.plop package."""
+"""Installer for the ftw.flamegraph package."""
 
 from setuptools import find_packages
 from setuptools import setup
@@ -20,7 +20,7 @@ long_description = (
 setup(
     name='ftw.flamegraph',
     version='1.0a1',
-    description="A statistical profiler for Plone which outputs a flamegraph",
+    description="Statistical profiling for Plone",
     long_description=long_description,
     # Get more from https://pypi.python.org/pypi?%3Aaction=list_classifiers
     classifiers=[

@@ -1,38 +1,25 @@
-.. This README is meant for consumption by humans and pypi. Pypi can render rst files so please do not use Sphinx features.
-   If you want to learn more about writing documentation, please check out: http://docs.plone.org/about/documentation_styleguide_addons.html
-   This text does not appear on pypi or github. It is a comment.
-
 ==============================================================================
 ftw.flamegraph
 ==============================================================================
 
-Tell me what your product does
+This package provides a statistical profiler for Plone and creates flame graphs
+for visualization of profiled code. It allows you to profile a single request
+in Plone.
 
-Features
---------
-
-- Can be bullet points
-
-
-Examples
---------
-
-This add-on can be seen in action at the following sites:
-- Is there a page on the internet where everybody can see the features?
+Because of it's low overhead, it can also be used for profiling Plone sites in
+production.
 
 
-Documentation
--------------
-
-Full documentation for end users can be found in the "docs" folder, and is also available online at http://docs.plone.org/foo/bar
-
-
-Translations
+Introduction
 ------------
 
-This product has been translated into
+In contrast to deterministic profilers that capture all code paths, ftw.flamegraph
+samples the call stack periodically (by default 1000 times per second) which
+reveals where time is being spent and involves less overhead.
 
-- Klingon (thanks, K'Plai)
+Flame graphs are a way to visualize statistical profile data, allowing hot code-paths
+to be identified quickly. For more information about flame graphs see:
+http://www.brendangregg.com/flamegraphs.html
 
 
 Installation
@@ -41,9 +28,7 @@ Installation
 Install ftw.flamegraph by adding it to your buildout::
 
     [buildout]
-
     ...
-
     eggs =
         ftw.flamegraph
 
@@ -51,21 +36,54 @@ Install ftw.flamegraph by adding it to your buildout::
 and then running ``bin/buildout``
 
 
-Contribute
-----------
+Usage
+-----
+
+To profile a request simply add the parameter ``flamegraph=1`` to the URL.
+
+Example::
+
+ http://localhost:8080/Plone?flamegraph=1
+
+This will profile the request and render a SVG containing a flame graph.
+
+You can customize the sampling interval by providing the ``interval`` parameter.
+
+Example::
+
+ http://localhost:8080/Plone?flamegraph=1&interval=0.0005
+
+This will sample the call stack 2000 times per second. Too small intervals will
+create more overhead while too large intervals may lead to missing hot code paths.
+
+
+Implementation notes
+--------------------
+
+ftw.flamegraph sets an interval timer which decrements in real time (ITIMER_REAL)
+and sends a signal (SIGALRM) upon expiration. Every time the signal gets delivered,
+the current thread's call stack gets recorded.
+
+While timers that decrement only when the process is executing (ITIMER_PROF and
+ITIMER_VIRTUAL) might be more appropriate for profiling, this is not possible with
+Zope 2. In Python those timers only decrement when the main thread is
+executing, but in Zope 2 the main thread is an asyncore loop that waits for I/O
+with a timeout of 30 seconds, making it inappropriate for periodic sampling.
+
+To get meaningful results you should make sure there are no other CPU intensive
+processes executing on the same CPU as the profiled process.
+
+
+Links
+-----
 
 - Issue Tracker: https://github.com/4teamwork/ftw.flamegraph/issues
 - Source Code: https://github.com/4teamwork/ftw.flamegraph
 
 
-Support
--------
+Copyright
+---------
 
-If you are having issues, please let us know.
-We have a mailing list located at: project@example.com
+This package is copyright by `4teamwork <http://www.4teamwork.ch/>`_.
 
-
-License
--------
-
-The project is licensed under the GPLv2.
+``ftw.flamegraph`` is licensed under GNU General Public License, version 2.
