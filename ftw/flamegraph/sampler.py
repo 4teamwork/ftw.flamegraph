@@ -7,18 +7,13 @@ import time
 class Sampler(object):
     """A call stack sampler
     """
-    MODES = {
-        'prof': (signal.ITIMER_PROF, signal.SIGPROF),
-        'virtual': (signal.ITIMER_VIRTUAL, signal.SIGVTALRM),
-        'real': (signal.ITIMER_REAL, signal.SIGALRM),
-    }
+    timer = signal.ITIMER_REAL
+    signal = signal.SIGALRM
 
-    def __init__(self, interval=0.001, mode='real'):
+    def __init__(self, interval=0.001):
         self.interval = interval
-        self.mode = mode
-        timer, sig = Sampler.MODES[self.mode]
-        signal.signal(sig, self.handler)
-        signal.siginterrupt(sig, False)
+        signal.signal(self.signal, self.handler)
+        signal.siginterrupt(self.signal, False)
         self.reset()
 
     def reset(self, interval=None):
@@ -35,8 +30,7 @@ class Sampler(object):
         self.thread_id = thread.get_ident()
         self.stopping = False
         self.stopped = False
-        timer, sig = Sampler.MODES[self.mode]
-        signal.setitimer(timer, self.interval, self.interval)
+        signal.setitimer(self.timer, self.interval, self.interval)
 
     def stop(self):
         self.stopping = True
@@ -44,12 +38,12 @@ class Sampler(object):
 
     def wait(self):
         while not self.stopped:
-            pass  # need busy wait; ITIMER_PROF doesn't proceed while sleeping
+            time.sleep(self.interval)
 
     def handler(self, sig, current_frame):
         start = time.time()
         if self.stopping:
-            signal.setitimer(Sampler.MODES[self.mode][0], 0, 0)
+            signal.setitimer(self.timer, 0, 0)
             self.stopped = True
             return
         current_tid = thread.get_ident()
@@ -58,6 +52,7 @@ class Sampler(object):
             if tid != self.thread_id:
                 continue
             if tid == current_tid:
+                print "tid == curent_tid"
                 frame = current_frame
             frames = []
             while frame is not None:
@@ -69,16 +64,14 @@ class Sampler(object):
         self.samples_taken += 1
         self.sample_time += (end - start)
 
-
-class FlamegraphFormatter(object):
-    """Creates Flamegraph files
-    """
-    def format(self, stacks):
+    def folded_stacks(self):
+        """Fold stack samples into single lines for flame graph generation"""
         output = ""
         previous = None
         previous_count = 1
-        for stack in stacks:
-            current = self.format_flame(stack)
+        for stack in self.stacks:
+            funcs = map("{0[2]} ({0[0]}:{0[1]})".format, reversed(stack))
+            current = ";".join(funcs)
             if current == previous:
                 previous_count += 1
             else:
@@ -87,11 +80,3 @@ class FlamegraphFormatter(object):
                 previous = current
         output += "%s %d\n" % (previous, previous_count)
         return output
-
-    def format_flame(self, stack):
-        funcs = map("{0[2]} ({0[0]}:{0[1]})".format, reversed(stack))
-        return ";".join(funcs)
-
-    def store(self, stacks, filename):
-        with open(filename, "wb") as f:
-            f.write(self.format(stacks).encode('utf-8'))
