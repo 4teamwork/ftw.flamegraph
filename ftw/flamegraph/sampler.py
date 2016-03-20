@@ -52,7 +52,6 @@ class Sampler(object):
             if tid != self.thread_id:
                 continue
             if tid == current_tid:
-                print "tid == curent_tid"
                 frame = current_frame
             frames = []
             while frame is not None:
@@ -75,7 +74,8 @@ class Sampler(object):
             if current == previous:
                 previous_count += 1
             else:
-                output += "%s %d\n" % (previous, previous_count)
+                if previous is not None:
+                    output += "%s %d\n" % (previous, previous_count)
                 previous_count = 1
                 previous = current
         output += "%s %d\n" % (previous, previous_count)

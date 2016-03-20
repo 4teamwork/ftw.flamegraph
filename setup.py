@@ -16,6 +16,9 @@ long_description = (
     open('CHANGES.rst').read() +
     '\n')
 
+tests_require = [
+    'plone.app.testing',
+]
 
 setup(
     name='ftw.flamegraph',
@@ -35,7 +38,7 @@ setup(
     keywords='Python Plone',
     author='Thomas Buchberger',
     author_email='t.buchberger@4teamwork.ch',
-    url='https://pypi.python.org/pypi/ftw.plop',
+    url='https://github.com/4teamwork/ftw.flamegraph',
     license='GPL version 2',
     packages=find_packages(exclude=['ez_setup']),
     namespace_packages=['ftw'],
@@ -45,9 +48,8 @@ setup(
         'setuptools',
     ],
     extras_require={
-        'test': [
-            'plone.app.testing',
-        ],
+        'test': tests_require,
+        'tests': tests_require,
     },
     entry_points="""
     [z3c.autoinclude.plugin]
