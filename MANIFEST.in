@@ -1,4 +1,5 @@
-graft src/ftw
-graft docs
+recursive-include ftw *
+recursive-include docs *
 include *.rst
 global-exclude *.pyc
+global-exclude ._*
