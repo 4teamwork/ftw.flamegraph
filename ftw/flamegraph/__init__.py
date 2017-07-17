@@ -4,17 +4,39 @@ from ZPublisher import Publish
 from contextlib import contextmanager
 from ftw.flamegraph.sampler import Sampler
 from urlparse import parse_qs
+from functools import wraps
 
+import logging
 import os
 import shutil
 import sys
 import tempfile
 import time
-import logging
 
 sampler = None
 logger = logging.getLogger("ftw.flamegraph")
 flamegraph_script = os.path.join(os.path.dirname(__file__), 'flamegraph.pl')
+
+
+def flamegraph(open_svg=False, open_command='open {}', interval=0.001):
+    """The @flamegraph() decorator wraps a function and produces a flamegraph
+    from calls within this function.
+    """
+    def decorator(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            with profile(interval, print_summary=True) as sampler:
+                return_value = func(*args, **kwargs)
+
+            svg_file_path = make_svg(sampler)
+            print '@flamegraph(', svg_file_path, ')'
+            if open_svg:
+                os.system(open_command.format(svg_file_path))
+
+            return return_value
+
+        return wrapper
+    return decorator
 
 
 def publish_module_standard(
@@ -40,26 +62,13 @@ def publish_module_standard(
 
         response.stdout = response_stdout
 
-        tempdir = tempfile.mkdtemp()
-        flame_file = os.path.join(tempdir, 'profile.flame')
-        svg_file = os.path.join(tempdir, 'profile.svg')
-
-        with open(flame_file, "wb") as f:
-            f.write(sampler.folded_stacks().encode('utf-8'))
-
-        os.system(
-            '%(flamegraph_script)s --egghash --color rainbow %(flame_file)s > '
-            '%(svg_file)s' % (dict(
-                flamegraph_script=flamegraph_script,
-                flame_file=flame_file,
-                svg_file=svg_file)))
-
-        with open(os.path.join(tempdir, 'profile.svg'), 'rb') as f:
+        svg_file_path = make_svg(sampler)
+        with open(svg_file_path, 'rb') as f:
             response.setBody(f.read())
         response.setHeader('Content-Type', 'image/svg+xml')
         response.stdout.write(str(response))
 
-        shutil.rmtree(tempdir)
+        shutil.rmtree(os.path.dirname(svg_file_path))
         return ret
 
     else:
@@ -72,20 +81,45 @@ publish_module_standard.original = Publish.publish_module_standard
 Publish.publish_module_standard = publish_module_standard
 
 
+def make_svg(sampler):
+    tempdir = tempfile.mkdtemp()
+    flame_file_path = os.path.join(tempdir, 'profile.flame')
+    svg_file_path = os.path.join(tempdir, 'profile.svg')
+
+    with open(flame_file_path, "wb") as f:
+        f.write(sampler.folded_stacks().encode('utf-8'))
+
+    os.system(
+        '%(flamegraph_script)s --egghash --color rainbow %(flame_file)s > '
+        '%(svg_file)s' % (dict(
+            flamegraph_script=flamegraph_script,
+            flame_file=flame_file_path,
+            svg_file=svg_file_path)))
+
+    return svg_file_path
+
+
 @contextmanager
-def profile(interval):
+def profile(interval, print_summary=False):
+    global sampler
+    if sampler is None:
+        sampler = Sampler()
+
     sampler.reset(interval=interval)
     sampler.start()
     start = time.time()
-    yield
+    yield sampler
     end = time.time()
     sampler.stop()
 
-    logger.info("Samples taken: %s, sample time: %s ms, request time: %s ms" % (
+    message = "Samples taken: %s, sample time: %s ms, duration: %s ms" % (
         sampler.samples_taken,
         sampler.sample_time * 1000,
         (end - start) * 1000
-    ))
+    )
+    logger.info(message)
+    if print_summary:
+        print '\n', message
 
 
 def initialize(context):

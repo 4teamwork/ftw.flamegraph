@@ -57,6 +57,28 @@ This will sample the call stack 2000 times per second. Too small intervals will
 create more overhead while too large intervals may lead to missing hot code paths.
 
 
+Use in tests
+------------
+
+The flamegraph decorator can be used for wrapping tests (or other functions) and
+producing a flamegraph:
+
+.. code:: python
+
+    from ftw.flamegraph import flamegraph
+
+    @flamegraph()
+    def test():
+        do_things()
+
+
+Options:
+
+- ``open_svg``: Open the SVG with the systems "open" command (default: ``True``)
+- ``interval``: The interval for taking snapshots (default: ``0.001``)
+
+
+
 Implementation notes
 --------------------
 
