@@ -22,7 +22,7 @@ tests_require = [
 
 setup(
     name='ftw.flamegraph',
-    version='1.0.2.dev0',
+    version='1.1.0',
     description="Statistical profiling for Plone",
     long_description=long_description,
     # Get more from https://pypi.python.org/pypi?%3Aaction=list_classifiers

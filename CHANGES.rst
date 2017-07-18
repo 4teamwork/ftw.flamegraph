@@ -2,7 +2,7 @@ Changelog
 =========
 
 
-1.0.2 (unreleased)
+1.1.0 (2017-07-18)
 ------------------
 
 - Add decorator for generating flamegraphs. [jone]
