@@ -3,15 +3,31 @@ from StringIO import StringIO
 from ZPublisher import Publish
 from contextlib import contextmanager
 from ftw.flamegraph.sampler import Sampler
-from urlparse import parse_qs
 from functools import wraps
+from urlparse import parse_qs
 
 import logging
 import os
+import pkg_resources
 import shutil
 import sys
 import tempfile
 import time
+
+
+IS_PLONE_5 = pkg_resources.get_distribution('Products.CMFPlone').version >= '5'
+
+
+if IS_PLONE_5:
+    from Products.CMFCore.indexing import processQueue
+else:
+    # optional collective.indexing support
+    try:
+        from collective.indexing.queue import processQueue
+    except ImportError:
+        def processQueue():
+            pass
+
 
 sampler = None
 logger = logging.getLogger("ftw.flamegraph")
@@ -27,6 +43,7 @@ def flamegraph(open_svg=False, open_command='open {}', interval=0.001):
         def wrapper(*args, **kwargs):
             with profile(interval, print_summary=True) as sampler:
                 return_value = func(*args, **kwargs)
+                processQueue()
 
             svg_file_path = make_svg(sampler)
             print '@flamegraph(', svg_file_path, ')'
@@ -59,6 +76,7 @@ def publish_module_standard(
                 module_name, stdin=stdin, stdout=stdout, stderr=stderr,
                 environ=environ, debug=debug, request=request,
                 response=response)
+            processQueue()
 
         response.stdout = response_stdout
 
