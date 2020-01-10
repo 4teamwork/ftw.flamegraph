@@ -79,6 +79,8 @@ def publish_module_standard(
             processQueue()
 
         response.stdout = response_stdout
+        # do not redirect (otherwise the flamegraph is lost)
+        response.setStatus(200)
 
         svg_file_path = make_svg(sampler)
         with open(svg_file_path, 'rb') as f:
